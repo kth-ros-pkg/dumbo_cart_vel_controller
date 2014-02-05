@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  
+  <!-- input argument can be 'left' or 'right' -->
+  <arg name="arm" default="left"/>
+
+  <node name="$(arg arm)_arm_cart_vel_controller" pkg="dumbo_cart_vel_controller" type="dumbo_cart_vel_controller_node" cwd="node" respawn="false" output="screen" >
+    <rosparam command="load" file="$(find dumbo_cart_vel_controller)/config/$(arg arm)_arm_cart_vel_controller.yaml" />
+  </node>
+</launch>
