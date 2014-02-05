@@ -6,5 +6,7 @@
 
   <node name="$(arg arm)_arm_cart_vel_controller" pkg="dumbo_cart_vel_controller" type="dumbo_cart_vel_controller_node" cwd="node" respawn="false" output="screen" >
     <rosparam command="load" file="$(find dumbo_cart_vel_controller)/config/$(arg arm)_arm_cart_vel_controller.yaml" />
+    <remap from="/$(arg arm)_arm_cart_vel_controller/command_vel" to="/$(arg arm)_arm_controller/command_vel" />
+    <remap from="/$(arg arm)_arm_cart_vel_controller/state" to="/$(arg arm)_arm_controller/state" />
   </node>
 </launch>

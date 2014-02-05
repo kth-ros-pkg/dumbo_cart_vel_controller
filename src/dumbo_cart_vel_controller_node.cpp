@@ -89,8 +89,8 @@ public:
 
 		if(isInitialized())
 		{
-			topicPub_CommandVel_ = n_.advertise<brics_actuator::JointVelocities>("/" + m_arm_select + "_arm_controller/command_vel", 1);
-			topicSub_JointState_ = n_.subscribe("/" + m_arm_select + "_arm_controller/state", 1, &CartVelControllerNode::topicCallback_joint_states, this);
+			topicPub_CommandVel_ = n_.advertise<brics_actuator::JointVelocities>("command_vel", 1);
+			topicSub_JointState_ = n_.subscribe("state", 1, &CartVelControllerNode::topicCallback_joint_states, this);
 			topicSub_CommandTwist_ = n_.subscribe("command_twist", 1, &CartVelControllerNode::topicCallback_twist, this);
 		}
 
