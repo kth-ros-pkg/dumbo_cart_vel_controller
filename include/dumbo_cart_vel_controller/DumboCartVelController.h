@@ -57,7 +57,7 @@ public:
 	ros::Subscriber topicSub_CommandTwist_;
 
 	DumboCartVelController();
-	~DumboCartVelController();
+	virtual ~DumboCartVelController();
 
 
 	bool isInitialized();
@@ -68,9 +68,10 @@ public:
 
 	void topicCallback_twist(const geometry_msgs::TwistStampedPtr &msg);
 
-	void topicCallback_joint_states(const control_msgs::JointTrajectoryControllerStatePtr &msg);
+	virtual void topicCallback_joint_states(const control_msgs::JointTrajectoryControllerStatePtr &msg);
 
-	// calculates joint velocities taking as input twist of *_arm_7_link with
+	// calculates joint velocities taking as input twist of *_arm_7_link
+	// expressed with respect to the base frame
 	bool calculateJointVel(const geometry_msgs::TwistStamped &twist);
 
 
