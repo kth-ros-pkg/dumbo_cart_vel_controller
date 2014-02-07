@@ -7,7 +7,7 @@ find_package(Boost REQUIRED COMPONENTS thread)
 catkin_package(
   DEPENDS
   CATKIN_DEPENDS roscpp brics_actuator control_msgs kdl_wrapper geometry_msgs
-  INCLUDE_DIRS
+  INCLUDE_DIRS include
   LIBRARIES dumbo_cart_vel_controller
 )
 
