@@ -8,7 +8,7 @@ catkin_package(
   DEPENDS
   CATKIN_DEPENDS roscpp brics_actuator control_msgs kdl_wrapper geometry_msgs
   INCLUDE_DIRS
-  LIBRARIES ${PROJECT_NAME} 
+  LIBRARIES dumbo_cart_vel_controller
 )
 
 include_directories(
@@ -19,10 +19,13 @@ include_directories(
 
 link_directories(${catkin_LIBRARY_DIRS})
 
-add_executable(dumbo_cart_vel_controller_node src/dumbo_cart_vel_controller_node.cpp)
+add_executable(dumbo_cart_vel_controller_node src/dumbo_cart_vel_controller_node.cpp src/DumboCartVelController.cpp)
 target_link_libraries(dumbo_cart_vel_controller_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
-install(TARGETS dumbo_cart_vel_controller_node
+add_library(dumbo_cart_vel_controller src/DumboCartVelController.cpp)
+target_link_libraries(dumbo_cart_vel_controller ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+install(TARGETS dumbo_cart_vel_controller_node dumbo_cart_vel_controller
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
