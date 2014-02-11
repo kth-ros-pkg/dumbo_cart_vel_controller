@@ -67,6 +67,7 @@ public:
 
 	void topicCallback_twist(const geometry_msgs::TwistStampedPtr &msg);
 
+	// saves joint state message to m_joint_state_msg and checks whether joint names are correct
 	virtual void topicCallback_joint_states(const control_msgs::JointTrajectoryControllerStatePtr &msg);
 
 	// calculates joint velocities taking as input twist of *_arm_7_link
