@@ -36,7 +36,6 @@
 #ifndef DUMBOCARTVELCONTROLLER_H_
 #define DUMBOCARTVELCONTROLLER_H_
 
-#include <brics_actuator/JointVelocities.h>
 #include <control_msgs/JointTrajectoryControllerState.h>
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/TwistStamped.h>
@@ -72,13 +71,16 @@ public:
 
 	// calculates joint velocities taking as input twist of *_arm_7_link
 	// expressed with respect to the base frame
-	bool calculateJointVel(const geometry_msgs::TwistStamped &twist);
+	// twist: input twist of *_arm_7_link
+	// q_dot: output joint velocities command to be sent to manipulator.
+	virtual bool calculateJointVelCommand(const geometry_msgs::TwistStamped &twist,
+			KDL::JntArray &q_dot);
 
 
-	void publishJointVel();
+	void publishJointVelCommand(const KDL::JntArray &q_dot);
 
 
-private:
+protected:
 	bool m_kdl_wrapper_initialized;
 
 	double m_v_limit;
@@ -92,12 +94,7 @@ private:
 
 	std::vector<std::string> m_joint_names;
 
-	geometry_msgs::TwistStamped m_twist;
-	control_msgs::JointTrajectoryControllerState m_joint_pos_msg;
-	brics_actuator::JointVelocities m_joint_vel_msg;
-
-	std::vector<double> m_joint_pos;
-	std::vector<double> m_joint_vel;
+	control_msgs::JointTrajectoryControllerState m_joint_state_msg;
 
 	boost::mutex m_mutex;
 
