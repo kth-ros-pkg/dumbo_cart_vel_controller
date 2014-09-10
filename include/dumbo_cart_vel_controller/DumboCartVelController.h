@@ -41,7 +41,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <kdl_wrapper/kdl_wrapper.h>
 #include <boost/thread.hpp>
-
+#include <brics_actuator/JointVelocities.h>
 
 class DumboCartVelController
 {
@@ -65,16 +65,17 @@ public:
 
 	bool setArmSelect(std::string ArmSelect);
 
+    // twist: input twist of *_arm_7_link with respect to 'arm_base_link'
 	void topicCallback_twist(const geometry_msgs::TwistStampedPtr &msg);
 
 	// saves joint state message to m_joint_state_msg and checks whether joint names are correct
 	virtual void topicCallback_joint_states(const control_msgs::JointTrajectoryControllerStatePtr &msg);
 
 	// calculates joint velocities taking as input twist of *_arm_7_link
-	// expressed with respect to the base frame
-	// twist: input twist of *_arm_7_link
+    // expressed with respect to the base frame ('arm_base_link')
+    // twist: input twist of *_arm_7_link with respect to 'arm_base_link'
 	// q_dot: output joint velocities command to be sent to manipulator.
-	virtual bool calculateJointVelCommand(const geometry_msgs::TwistStamped &twist,
+    virtual bool calculateJointVelCommand(const KDL::Twist &twist,
 			KDL::JntArray &q_dot);
 
 
@@ -95,7 +96,10 @@ protected:
 
 	std::vector<std::string> m_joint_names;
 
-	control_msgs::JointTrajectoryControllerState m_joint_state_msg;
+    control_msgs::JointTrajectoryControllerState m_joint_state_msg;
+    KDL::JntArray q_;
+
+    brics_actuator::JointVelocities joint_vel_command_;
 
 	boost::mutex m_mutex;
 

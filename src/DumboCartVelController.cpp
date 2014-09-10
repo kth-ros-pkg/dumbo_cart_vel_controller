@@ -34,7 +34,7 @@
 */
 
 #include <dumbo_cart_vel_controller/DumboCartVelController.h>
-#include <brics_actuator/JointVelocities.h>
+#include <kdl_conversions/kdl_msg.h>
 
 
 DumboCartVelController::DumboCartVelController()
@@ -45,6 +45,9 @@ DumboCartVelController::DumboCartVelController()
 	m_initialized = false;
 
 	getROSParameters();
+
+    q_.resize(m_DOF);
+    joint_vel_command_.velocities.resize(m_DOF);
 
 	if(!m_kdl_wrapper_initialized)
 	{
@@ -175,8 +178,21 @@ bool DumboCartVelController::setArmSelect(std::string ArmSelect)
 
 void DumboCartVelController::topicCallback_twist(const geometry_msgs::TwistStampedPtr &msg)
 {
+    if(msg->header.frame_id != "arm_base_link")
+    {
+        static ros::Time t = ros::Time::now();
+        if((ros::Time::now() - t).toSec()>2.0)
+        {
+            ROS_ERROR("Twist not expressed in arm_base_link frame");
+            t = ros::Time::now();
+        }
+        return;
+    }
+
+    KDL::Twist twist;
+    tf::twistMsgToKDL(msg->twist, twist);
 	KDL::JntArray q_dot;
-	if(calculateJointVelCommand(*msg, q_dot))
+    if(calculateJointVelCommand(twist, q_dot))
 		publishJointVelCommand(q_dot);
 }
 
@@ -184,8 +200,9 @@ void DumboCartVelController::topicCallback_joint_states(const control_msgs::Join
 {
 	ROS_DEBUG("Received joint states");
 
-	m_mutex.lock();
-	m_joint_state_msg = *msg;
+    m_mutex.lock();
+    m_joint_state_msg = *msg;
+    for(unsigned int i=0; i<m_DOF; i++) q_(i) = msg->actual.positions[i];
 	m_mutex.unlock();
 
 	// search for joints in joint state msg
@@ -214,21 +231,13 @@ void DumboCartVelController::topicCallback_joint_states(const control_msgs::Join
 		return;
 
 	}
+
 	m_received_js = true;
 }
 
-bool DumboCartVelController::calculateJointVelCommand(const geometry_msgs::TwistStamped &twist, KDL::JntArray &q_dot)
+bool DumboCartVelController::calculateJointVelCommand(const KDL::Twist &twist, KDL::JntArray &q_dot)
 {
-	if(twist.header.frame_id != "/arm_base_link" && twist.header.frame_id != "arm_base_link")
-	{
-		static ros::Time t = ros::Time::now();
-		if((ros::Time::now() - t).toSec()>2.0)
-		{
-			ROS_ERROR("Input twist not expressed in arm_base_link frame");
-			t = ros::Time::now();
-		}
-		return false;
-	}
+    KDL::Twist twist_scaled = twist;
 
 	if(!m_kdl_wrapper_initialized)
 	{
@@ -241,54 +250,29 @@ bool DumboCartVelController::calculateJointVelCommand(const geometry_msgs::Twist
 		return false;
 	}
 
-	if(!m_received_js)
-	{
-		static ros::Time t = ros::Time::now();
-		if((ros::Time::now() - t).toSec()>2.0)
-		{
-			ROS_ERROR("Haven't received joint states");
-			t = ros::Time::now();
-		}
-		return false;
-	}
-
-	KDL::Twist v_in;
-	v_in(0) = twist.twist.linear.x;
-	v_in(1) = twist.twist.linear.y;
-	v_in(2) = twist.twist.linear.z;
-	v_in(3) = twist.twist.angular.x;
-	v_in(4) = twist.twist.angular.y;
-	v_in(5) = twist.twist.angular.z;
-
-
 	//saturate velocity screw
-	double v_scale = (sqrt(pow(v_in(0), 2.0) + pow(v_in(1), 2.0) + pow(v_in(2), 2.0))/m_v_limit);
+    double v_scale = (sqrt(pow(twist_scaled(0), 2.0) + pow(twist_scaled(1), 2.0) + pow(twist_scaled(2), 2.0))/m_v_limit);
 
 	if(v_scale>1.0)
 	{
 		for(int i=0; i<3; i++)
 		{
-			v_in(i) /= v_scale;
+            twist_scaled(i) /= v_scale;
 		}
 	}
 
-	double w_scale = sqrt(pow(v_in(3), 2.0) + pow(v_in(4), 2.0) + pow(v_in(5), 2.0))/(m_w_limit);
+    double w_scale = sqrt(pow(twist_scaled(3), 2.0) + pow(twist_scaled(4), 2.0) + pow(twist_scaled(5), 2.0))/(m_w_limit);
 
 	if(w_scale>1.0)
 	{
 		for(int i=0; i<3; i++)
 		{
-			v_in(i+3) /= w_scale;
+            twist_scaled(i+3) /= w_scale;
 		}
 	}
 
-	KDL::JntArray q_in(7);
 
-	m_mutex.lock();
-	for(unsigned int i=0; i<7; i++) q_in(i) = m_joint_state_msg.actual.positions[i];
-	m_mutex.unlock();
-
-	bool ret = m_dumbo_kdl_wrapper.ik_solver_vel->CartToJnt(q_in, v_in, q_dot);
+    bool ret = m_dumbo_kdl_wrapper.ik_solver_vel->CartToJnt(q_, twist_scaled, q_dot);
 
 	return true;
 }
@@ -297,8 +281,6 @@ void DumboCartVelController::publishJointVelCommand(const KDL::JntArray &q_dot)
 {
 	ROS_DEBUG("Publish vel");
 
-	static brics_actuator::JointVelocities joint_vel_command;
-	joint_vel_command.velocities.resize(m_DOF);
 
 	if(m_received_js)
 	{
@@ -307,11 +289,11 @@ void DumboCartVelController::publishJointVelCommand(const KDL::JntArray &q_dot)
 		{
 			for(unsigned int i=0; i<m_DOF; i++)
 			{
-				joint_vel_command.velocities[i].unit = "rad";
-				joint_vel_command.velocities[i].joint_uri = m_joint_names[i].c_str();
-				joint_vel_command.velocities[i].value = q_dot(i);
+                joint_vel_command_.velocities[i].unit = "rad";
+                joint_vel_command_.velocities[i].joint_uri = m_joint_names[i].c_str();
+                joint_vel_command_.velocities[i].value = q_dot(i);
 			}
-			topicPub_CommandVel_.publish(joint_vel_command);
+            topicPub_CommandVel_.publish(joint_vel_command_);
 			ROS_DEBUG("Velocity command");
 		}
 		else
@@ -319,7 +301,7 @@ void DumboCartVelController::publishJointVelCommand(const KDL::JntArray &q_dot)
 			static ros::Time t = ros::Time::now();
 			if((ros::Time::now() - t).toSec()>2.0)
 			{
-				ROS_ERROR("Joint pos too old");
+                ROS_ERROR("Joint pos old time stamp");
 				t = ros::Time::now();
 			}
 			return;

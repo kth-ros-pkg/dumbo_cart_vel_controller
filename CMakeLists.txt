@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(dumbo_cart_vel_controller)
 
-find_package(catkin REQUIRED COMPONENTS roscpp brics_actuator control_msgs kdl_wrapper geometry_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp brics_actuator control_msgs kdl_wrapper geometry_msgs kdl_conversions)
 find_package(Boost REQUIRED COMPONENTS thread)
 
 catkin_package(
   DEPENDS
-  CATKIN_DEPENDS roscpp brics_actuator control_msgs kdl_wrapper geometry_msgs
+  CATKIN_DEPENDS roscpp brics_actuator control_msgs kdl_wrapper geometry_msgs kdl_conversions
   INCLUDE_DIRS include
   LIBRARIES dumbo_cart_vel_controller
 )
